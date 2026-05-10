@@ -1116,7 +1116,8 @@ INSTITUTIONAL QUANTITATIVE RESEARCH GUIDE
     else:
         universe = []
         for s in [x.strip().upper() for x in args.universe.split(",")]:
-            universe.append(s if ("." in s or len(s) > 6) else f"{s}.NS")
+            # Always append .NS if there's no dot, assuming Indian tickers unless specified
+            universe.append(s if "." in s else f"{s}.NS")
 
     # ── Strategy registry ─────────────────────────────────────────────────────
     strategies: Dict[str, Any] = {
