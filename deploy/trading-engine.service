@@ -1,0 +1,37 @@
+# /etc/systemd/system/trading-engine.service
+# Install: sudo cp deploy/trading-engine.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable trading-engine
+[Unit]
+Description=Trading Engine Daemon
+Documentation=file:///home/trader/trading_platform/README.md
+After=network.target trading-risk.service
+Requires=trading-risk.service
+
+[Service]
+Type=simple
+User=trader
+Group=trader
+WorkingDirectory=/home/trader/trading_platform
+EnvironmentFile=/home/trader/.trading_env
+
+ExecStart=/home/trader/trading_platform/venv/bin/python engine.py
+
+# Auto-restart on crash. 5 second delay.
+Restart=on-failure
+RestartSec=5
+
+# Stop restarting after 5 crashes in 5 minutes.
+# Something is fundamentally wrong — require manual intervention.
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=50%
+
+StandardOutput=append:/home/trader/trading_platform/logs/engine_systemd.log
+StandardError=append:/home/trader/trading_platform/logs/engine_systemd_err.log
+
+[Install]
+WantedBy=multi-user.target

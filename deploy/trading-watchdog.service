@@ -1,0 +1,30 @@
+# /etc/systemd/system/trading-watchdog.service
+# NOTE: Restart=always with NO StartLimitBurst.
+# The watchdog MUST always restart. If it stops, nothing monitors positions.
+[Unit]
+Description=Trading Watchdog — Position Monitor and Emergency Executor
+After=network.target
+# Watchdog does NOT require engine — it must run even when engine is dead.
+
+[Service]
+Type=simple
+User=trader
+Group=trader
+WorkingDirectory=/home/trader/trading_platform
+EnvironmentFile=/home/trader/.trading_env
+
+ExecStart=/home/trader/trading_platform/venv/bin/python monitor/watchdog.py
+
+# ALWAYS restart. No burst limit. Watchdog must never stay dead.
+Restart=always
+RestartSec=3
+StartLimitBurst=0
+
+MemoryMax=256M
+CPUQuota=25%
+
+StandardOutput=append:/home/trader/trading_platform/logs/watchdog_systemd.log
+StandardError=append:/home/trader/trading_platform/logs/watchdog_systemd_err.log
+
+[Install]
+WantedBy=multi-user.target

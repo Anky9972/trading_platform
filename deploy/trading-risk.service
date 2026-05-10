@@ -1,0 +1,27 @@
+# /etc/systemd/system/trading-risk.service
+[Unit]
+Description=Trading Risk Server
+After=network.target
+
+[Service]
+Type=simple
+User=trader
+Group=trader
+WorkingDirectory=/home/trader/trading_platform
+EnvironmentFile=/home/trader/.trading_env
+
+ExecStart=/home/trader/trading_platform/venv/bin/python risk/server.py
+
+Restart=on-failure
+RestartSec=3
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+MemoryMax=256M
+CPUQuota=25%
+
+StandardOutput=append:/home/trader/trading_platform/logs/risk_systemd.log
+StandardError=append:/home/trader/trading_platform/logs/risk_systemd_err.log
+
+[Install]
+WantedBy=multi-user.target

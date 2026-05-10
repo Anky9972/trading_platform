@@ -1,0 +1,2 @@
+{"ts": "2026-03-15T12:20:51.181635", "type": "emergency.sell.initiated", "data": {"symbol": "PERSISTENT", "quantity": 10, "current_price": 4700.0, "entry_price": 5200.0, "pnl_pct": -9.6}}
+{"ts": "2026-03-15T12:20:51.197183", "type": "emergency.sell.placed", "data": {"symbol": "PERSISTENT", "broker_order_id": "PAPER-407F1858", "quantity": 10}}

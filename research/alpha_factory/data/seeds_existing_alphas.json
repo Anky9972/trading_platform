@@ -1,0 +1,122 @@
+[
+  {
+    "expression": "raw2 = ts_backfill(implied_volatility_call_180 - implied_volatility_put_180, 32);\nsmooth2 = ts_mean(raw2, 30);\nintraday = (high + low - close - close) / (close * 2.0);\nintraday_smooth = ts_mean(intraday, 3);\nvwap_gap = (vwap - close) / close;\nmicro = rank(intraday_smooth) * rank(vwap_gap);\nscore = 0.40 * rank(smooth2) + 0.60 * micro;\ngroup_neutralize(rank(score), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "iv_skew_micro_blend", "anomaly_tag": "iv_skew",
+    "metrics": {"sharpe_full": 2.19, "turnover": 0.4044, "max_drawdown": 0.0412, "self_corr_max": 0.7205},
+    "verdict": "promote", "fitness": 2.0, "rationale": "Alpha 1 production",
+    "notes": "Alpha 1 - IV skew + intraday micro"
+  },
+  {
+    "expression": "vwap_gap = (vwap - close) / close;\nrel_vol = volume / ts_mean(volume, 20);\nmicro = rank(vwap_gap) * rank(rel_vol);\nadjusted = 0.7 * micro + 0.3 * (micro - ts_delay(micro, 1));\nscore = group_neutralize(rank(ts_mean(adjusted, 63)), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "vwap_volume_smoothed_micro", "anomaly_tag": "intraday_micro",
+    "metrics": {"sharpe_full": 2.01, "turnover": 0.0974, "max_drawdown": 0.0621, "self_corr_max": 0.4817},
+    "verdict": "iterate", "fitness": 0.5, "rationale": "Alpha 2 - IS only, OS unknown",
+    "notes": "Alpha 2 - IS-only, unverified OS"
+  },
+  {
+    "expression": "bm = equity / (cap * (1 + 0.000001));\nroe = operating_income / (equity * (1 + 0.000001));\nbm_z = zscore(ts_rank(bm, 52));\nroe_z = zscore(ts_rank(roe, 52));\nmidpoint = (high + low - close - close) / (close * 2.0);\nmid_z = zscore(ts_rank(midpoint, 5));\nscore = 0.40 * bm_z + 0.35 * roe_z + 0.25 * mid_z;\ngroup_neutralize(rank(score), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "value_quality_micro_blend", "anomaly_tag": "value",
+    "metrics": {"sharpe_full": 1.91, "turnover": 0.2917, "max_drawdown": 0.0475, "self_corr_max": 0.9706},
+    "verdict": "iterate", "fitness": 1.5, "rationale": "Alpha 3 - solid value+MR",
+    "notes": "Alpha 3 - Value + intraday momentum"
+  },
+  {
+    "expression": "bm = equity / (cap * (1 + 0.000001));\nroe = operating_income / (equity * (1 + 0.000001));\nbm_z = zscore(ts_rank(bm, 52));\nroe_z = zscore(ts_rank(roe, 52));\nscore = 0.55 * bm_z + 0.45 * roe_z;\ngroup_neutralize(rank(score), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "pure_value", "anomaly_tag": "value",
+    "metrics": {"sharpe_full": 1.52, "turnover": 0.1569, "max_drawdown": 0.0600, "self_corr_max": 0.9706},
+    "verdict": "iterate", "fitness": 1.0, "rationale": "Alpha 4 - pure value, weak standalone",
+    "notes": "Alpha 4 - pure value baseline"
+  },
+  {
+    "expression": "intraday = (high + low - close - close) / (close * 2.0);\nintraday_smooth = ts_mean(intraday, 3);\nmidpoint_5d = (ts_mean(high, 5) + ts_mean(low, 5)) / 2;\ngap_5d = (midpoint_5d - close) / close;\nvwap_gap_3d = (ts_mean(vwap, 3) - close) / close;\nfast_signal = rank(intraday_smooth) * rank(gap_5d) * rank(vwap_gap_3d);\nprofit = operating_income / cap;\nop_cost_eff = operating_income / (ebitda + cap / 1000000);\nent_cost = operating_income / (enterprise_value + cap / 1000000);\nlow_liab = liabilities / assets;\nfast_z = zscore(fast_signal);\nprofit_z = zscore(rank(profit));\nop_cost_z = zscore(rank(op_cost_eff));\nent_cost_z = zscore(rank(ent_cost));\nliab_z = zscore(rank(low_liab));\nfast_g = group_neutralize(fast_z, subindustry);\nslow_g = group_neutralize(profit_z + op_cost_z + ent_cost_z + liab_z, sector);\nscore = 0.75 * fast_g + 0.25 * slow_g;\nrank(score)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "fast_pressure_slow_fundamental", "anomaly_tag": "multi_factor",
+    "metrics": {"sharpe_full": 2.10, "turnover": 0.3714, "max_drawdown": 0.0893, "self_corr_max": 0.7217},
+    "verdict": "promote", "fitness": 1.7, "rationale": "Alpha 5 - solid multi-factor",
+    "notes": "Alpha 5 - fast multi-pressure + slow fundamentals"
+  },
+  {
+    "expression": "vwap_gap = (vwap - close) / close;\nrange_pos = (close - low) / (high - low);\nintraday_mr = (high + low - close - close) / (close + close);\nop_yield = operating_income / cap;\nent_yield = operating_income / enterprise_value;\nea_frac = cap / enterprise_value;\nmr_z = zscore(ts_rank(intraday_mr, 252));\nop_z = zscore(ts_rank(op_yield, 252));\nent_z = zscore(ts_rank(ent_yield, 252));\nliab_z = zscore(ts_rank(-1 * ea_frac, 252));\nrel_vol = volume / ts_mean(volume, 20);\nmicro = rank(vwap_gap) * rank(-1 * (range_pos - 0.5)) * rank(rel_vol);\nmicro_g = group_neutralize(rank(micro), subindustry);\nmr_g = group_neutralize(rank(mr_z), subindustry);\nop_g = group_neutralize(rank(op_z), sector);\nent_g = group_neutralize(rank(ent_z), sector);\nliab_g = group_neutralize(rank(liab_z), sector);\nscore = 0.50 * micro_g + 0.20 * mr_g + 0.15 * op_g + 0.10 * ent_g + 0.05 * liab_g;\nrank(score)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "multi_horizon_micro_mr_fundamental", "anomaly_tag": "multi_factor",
+    "metrics": {"sharpe_full": 2.78, "turnover": 0.6497, "max_drawdown": 0.0674, "self_corr_max": 0.7807},
+    "verdict": "promote", "fitness": 2.5, "rationale": "Alpha 6 - champion",
+    "notes": "Alpha 6 - CHAMPION (Sharpe 2.78)"
+  },
+  {
+    "expression": "vwap_gap = (vwap - close) / close;\nrange_pos = (close - low) / (high - low);\nintraday_mr = (high + low - close - close) / (close + close);\nop_yield = operating_income / cap;\nliab_frac = 1 - cap / enterprise_value;\nea_frac = cap / enterprise_value;\nmr_z = zscore(ts_rank(intraday_mr, 252));\nop_z = zscore(ts_rank(op_yield, 252));\nliab_z = zscore(ts_rank(-1 * liab_frac, 252));\nea_z = zscore(ts_rank(ea_frac, 252));\nrel_vol = volume / ts_mean(volume, 20);\nmicro = rank(vwap_gap) * rank(-1 * (range_pos - 0.5)) * rank(rel_vol);\nslow_score = 0.40 * mr_z + 0.25 * op_z + 0.20 * liab_z + 0.15 * ea_z;\nscore = rank(ts_decay_linear(micro, 3)) + slow_score;\ngroup_neutralize(rank(score), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "micro_decay_slow_fundamental", "anomaly_tag": "multi_factor",
+    "metrics": {"sharpe_full": 2.20, "turnover": 0.4636, "max_drawdown": 0.0517, "self_corr_max": 0.7807},
+    "verdict": "promote", "fitness": 2.0, "rationale": "Alpha 7 - solid alternative to 6",
+    "notes": "Alpha 7"
+  },
+  {
+    "expression": "vwap_gap = (vwap - close) / close;\nrange_pos = (close - low) / (high - low);\nrel_vol = volume / ts_mean(volume, 125);\nmicro = rank(vwap_gap) * rank(-1 * (range_pos - 0.5)) * rank(rel_vol);\nscore = ts_decay_linear(micro, 3);\ngroup_neutralize(rank(score), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "pure_micro_decay", "anomaly_tag": "intraday_micro",
+    "metrics": {"sharpe_full": 2.27, "turnover": 0.4190, "max_drawdown": 0.0558, "self_corr_max": 0.6764},
+    "verdict": "promote", "fitness": 2.1, "rationale": "Alpha 8 - safe core",
+    "notes": "Alpha 8 - pure micro decay"
+  },
+  {
+    "expression": "mom_1d = -1 * returns;\nmom_5d = -1 * (close - ts_delay(close, 5)) / ts_delay(close, 5);\nreversal = 0.50 * mom_1d + 0.50 * mom_5d;\nvariance = ts_mean(returns * returns, 10);\nprice_kelly = reversal / variance;\nmidpoint_pct = ((high + low) / 2 - close) / close;\nent_yield = ebitda / cap;\nscore = 0.40 * rank(price_kelly) + 0.35 * rank(midpoint_pct) + 0.25 * rank(ent_yield);\ngroup_neutralize(rank(score), sector)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "kelly_reversal_yield", "anomaly_tag": "reversal",
+    "metrics": {"sharpe_full": 2.23, "turnover": 0.5312, "max_drawdown": 0.0811, "self_corr_max": 0.6710},
+    "verdict": "promote", "fitness": 1.8, "rationale": "Alpha 9 - aggressive convexity",
+    "notes": "Alpha 9 - Kelly reversal + EBITDA yield"
+  },
+  {
+    "expression": "rel_vol = volume / ts_mean(volume, 20);\nshock = sign(-1 * returns) * ts_rank(abs(returns), 252) * rel_vol;\ngroup_neutralize(rank(ts_decay_linear(shock, 5)), industry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "vol_scaled_shock", "anomaly_tag": "low_vol",
+    "metrics": {"sharpe_full": 1.80, "turnover": 0.4392, "max_drawdown": 0.0486, "self_corr_max": 0.7217},
+    "verdict": "promote", "fitness": 1.4, "rationale": "Alpha 11 - defensive stabilizer",
+    "notes": "Alpha 11 - vol-scaled shock"
+  },
+  {
+    "expression": "intraday_mr = (high + low) / 2 - close;\nop_yield = operating_income / cap;\nmr_z = zscore(ts_rank(intraday_mr, 252));\nop_z = zscore(ts_rank(op_yield, 252));\nscore = 0.60 * mr_z + 0.40 * op_z;\ngroup_neutralize(rank(score), subindustry)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "long_horizon_intraday_mr", "anomaly_tag": "mean_reversion",
+    "metrics": {"sharpe_full": 2.76, "turnover": 0.5030, "max_drawdown": 0.0534, "self_corr_max": 0.7685},
+    "verdict": "promote", "fitness": 2.5, "rationale": "Alpha 15 - top single-alpha pick",
+    "notes": "Alpha 15 - long-horizon intraday MR + op yield (top pick)"
+  },
+  {
+    "expression": "ner = ts_backfill(snt1_d1_netearningsrevision, 30);\nntp = ts_backfill(snt1_d1_nettargetpercent, 30);\nesp = ts_backfill(snt1_d1_earningssurprise, 30);\nner_trend = ts_mean(ner, 21) - ts_mean(ner, 63);\nntp_trend = ts_mean(ntp, 21) - ts_mean(ntp, 63);\nrevision_raw = zscore(rank(ner)) + zscore(rank(ntp)) + 0.50 * zscore(rank(esp)) + 0.50 * zscore(rank(ner_trend)) + 0.50 * zscore(rank(ntp_trend));\niv30 = ts_backfill(implied_volatility_mean_30, 10);\nrv30 = ts_backfill(parkinson_volatility_30, 10);\nvrp = (iv30 - rv30) / (rv30 + 0.001);\nvrp_z = -1 * zscore(ts_rank(vrp, 126));\nsk_s = ts_backfill(implied_volatility_mean_skew_30, 10);\nsk_l = ts_backfill(implied_volatility_mean_skew_180, 10);\nskew_z = -1 * zscore(ts_rank(sk_s - sk_l, 126));\npcr = ts_backfill(pcr_oi_180, 10);\npcr_z = zscore(ts_rank(pcr, 252));\nsm = ts_backfill(snt_social_value, 5);\nsm_z = zscore(ts_decay_linear(sm, 3));\ncore_v = 0.40 * revision_raw + 0.18 * vrp_z + 0.14 * skew_z + 0.14 * pcr_z + 0.14 * sm_z;\nivol = ts_backfill(unsystematic_risk_last_90_days, 30);\nivol_z = -1 * zscore(ts_rank(ivol, 252));\nscore = core_v + 0.10 * ivol_z;\ngroup_neutralize(rank(score), sector)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "info_cascade_cross_domain", "anomaly_tag": "pead_cross_domain",
+    "metrics": {"sharpe_full": -0.67, "turnover": 0.1717, "max_drawdown": 0.2337, "self_corr_max": 0.3111},
+    "verdict": "kill", "fitness": -0.29, "rationale": "v1 - 3 sign errors + unit drift bug",
+    "notes": "Alpha 19 v1 - failed (Sharpe -0.67), unit warning, 3 wrong-signed components"
+  },
+  {
+    "expression": "ner = ts_backfill(snt1_d1_netearningsrevision, 30);\nntp = ts_backfill(snt1_d1_nettargetpercent, 30);\nesp = ts_backfill(snt1_d1_earningssurprise, 30);\nner_trend = ts_mean(ner, 21) - ts_mean(ner, 63);\nntp_trend = ts_mean(ntp, 21) - ts_mean(ntp, 63);\nc1 = zscore(rank(ner)) + zscore(rank(ntp)) + 0.5 * zscore(rank(esp)) + 0.5 * zscore(rank(ner_trend)) + 0.5 * zscore(rank(ntp_trend));\nsk30 = ts_backfill(implied_volatility_mean_skew_30, 10);\nc3 = -1 * zscore(ts_rank(sk30, 126));\npcr = ts_backfill(pcr_oi_60, 10);\nc4 = -1 * zscore(ts_rank(pcr, 252));\nsm = ts_backfill(snt_social_value, 5);\nc5 = -1 * zscore(ts_decay_linear(sm, 3));\nivol = ts_backfill(unsystematic_risk_last_90_days, 30);\nc6 = -1 * zscore(ts_rank(ivol, 252));\nscore = 0.50 * c1 + 0.15 * c3 + 0.15 * c4 + 0.10 * c5 + 0.10 * c6;\ngroup_neutralize(rank(score), sector)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "info_cascade_cross_domain_v2", "anomaly_tag": "pead_cross_domain",
+    "metrics": {"sharpe_full": -0.62, "turnover": 0.1564, "max_drawdown": 0.1982, "self_corr_max": 0.3325},
+    "verdict": "kill", "fitness": -0.27, "rationale": "v2 - flips on noise components didn't move needle",
+    "notes": "Alpha 19 v2 - failed identically to v1; supporting components are noise"
+  },
+  {
+    "expression": "ner = ts_backfill(snt1_d1_netearningsrevision, 30);\nntp = ts_backfill(snt1_d1_nettargetpercent, 30);\nesp = ts_backfill(snt1_d1_earningssurprise, 30);\nner_trend = ts_mean(ner, 21) - ts_mean(ner, 63);\nntp_trend = ts_mean(ntp, 21) - ts_mean(ntp, 63);\nc1 = zscore(rank(ner)) + zscore(rank(ntp)) + 0.5 * zscore(rank(esp)) + 0.5 * zscore(rank(ner_trend)) + 0.5 * zscore(rank(ntp_trend));\nsk30 = ts_backfill(implied_volatility_mean_skew_30, 10);\nc3 = -1 * zscore(ts_rank(sk30, 126));\npcr = ts_backfill(pcr_oi_60, 10);\nc4 = -1 * zscore(ts_rank(pcr, 252));\nsm = ts_backfill(snt_social_value, 5);\nc5 = -1 * zscore(ts_decay_linear(sm, 3));\nivol = ts_backfill(unsystematic_risk_last_90_days, 30);\nc6 = -1 * zscore(ts_rank(ivol, 252));\nscore = 0.50 * c1 + 0.15 * c3 + 0.15 * c4 + 0.10 * c5 + 0.10 * c6;\ngroup_neutralize(rank(-1 * score), sector)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "info_cascade_cross_domain_v3_flipped", "anomaly_tag": "contrarian_pead",
+    "metrics": {"sharpe_full": 0.62, "turnover": 0.1564, "max_drawdown": 0.0650, "self_corr_max": 0.3217},
+    "verdict": "iterate", "fitness": 0.27, "rationale": "v3 diagnostic flip confirmed contrarian direction",
+    "notes": "Alpha 19 v3 - flipped score; family alive, weak standalone"
+  },
+  {
+    "expression": "ner = ts_backfill(snt1_d1_netearningsrevision, 30);\nntp = ts_backfill(snt1_d1_nettargetpercent, 30);\nesp = ts_backfill(snt1_d1_earningssurprise, 30);\nner_trend = ts_mean(ner, 21) - ts_mean(ner, 63);\nntp_trend = ts_mean(ntp, 21) - ts_mean(ntp, 63);\nc1_raw = zscore(rank(ner)) + zscore(rank(ntp)) + 0.5 * zscore(rank(esp)) + 0.5 * zscore(rank(ner_trend)) + 0.5 * zscore(rank(ntp_trend));\nc1 = -1 * ts_decay_linear(c1_raw, 5);\nivol = ts_backfill(unsystematic_risk_last_90_days, 30);\nc6 = -1 * zscore(ts_rank(ivol, 252));\nc1_w = winsorize(c1, std=4);\nc6_w = winsorize(c6, std=4);\nscore = 0.85 * c1_w + 0.15 * c6_w;\ngroup_neutralize(rank(score), sector)",
+    "neutralization": "NONE", "decay": 0,
+    "archetype": "concentrated_contrarian_pead_lowvol", "anomaly_tag": "contrarian_pead",
+    "metrics": {"sharpe_full": 0.45, "turnover": 0.1096, "max_drawdown": 0.0827, "self_corr_max": 0.3046},
+    "verdict": "kill", "fitness": 0.18, "rationale": "v4 - concentrate hurt; family capped sub-1.0",
+    "notes": "Alpha 19 v4 - failed standalone (0.45) but +137 IQC combined score from orthogonality"
+  }
+]

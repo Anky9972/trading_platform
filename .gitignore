@@ -1,0 +1,64 @@
+# Credentials
+.env
+*.key
+.broker_session
+.broker_session.tmp
+
+# Runtime state
+.kill_switch
+.kill_switch.tmp
+.engine.pid
+.risk.pid
+.watchdog.pid
+.engine_heartbeat
+trading.db
+trading.db-wal
+trading.db-shm
+events.jsonl
+alerts.log
+
+# Symbol cache
+angel_symbols.json
+angel_symbols.json.tmp
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Sandbox temp dirs
+strat_*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Virtual env
+venv/
+.venv/
+
+# Evaluation and Graph outputs
+*.html
+*.txt
+backtest_results/
+mfa10_benchmark/
+verification_run*
+my_new_backtest/
+test_plot/
+test_fundamentals*/
+
+# Graphify Outputs
+graphify/*.html
+graphify/*.json
+
+!requirements.txt
